@@ -1,0 +1,29 @@
+
+# Example of 2-stage build that also uses a python virtual environment.
+#
+#
+FROM python:3.8-slim-buster AS compile-image
+
+# ARG variables for pulling from Github
+ARG GITHUB_USER
+ARG GITHUB_TOKEN
+
+COPY requirements.txt .
+
+ENV VIRTUAL_ENV=/opt/venv
+
+RUN python -m venv ${VIRTUAL_ENV}
+RUN apt-get update && apt-get install -y git && . ${VIRTUAL_ENV}/bin/activate && pip install --upgrade pip setuptools && pip install -r requirements.txt
+
+FROM python:3.8-slim-buster as build-image
+
+# Copy the venv directory from the compile-image
+COPY --from=compile-image /opt/venv /opt/venv
+
+# Copy any additional scripts
+COPY scripts/ /usr/local/src/
+COPY src/ /usr/local/src/
+
+# Add venv to PATH
+ENV PYTHONPATH=/usr/local/src:$PYTHONPATH
+ENV PATH=/opt/venv/bin:/usr/local/src:$PATH
